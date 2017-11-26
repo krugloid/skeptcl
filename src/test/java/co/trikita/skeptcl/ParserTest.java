@@ -41,6 +41,13 @@ public class ParserTest {
 		assertEquals(new Token("  \t", TokenType.SEP), parser.nextToken());
 		assertEquals(new Token("\n;\n\t\t  ", TokenType.EOL), parser.nextToken());
 		assertEquals(new Token("", TokenType.EOF), parser.nextToken());
+		parser = new Parser("puts \"Hello\" ");
+		assertEquals(new Token("puts", TokenType.STR), parser.nextToken());
+		assertEquals(new Token(" ", TokenType.SEP), parser.nextToken());
+		assertEquals(new Token("Hello", TokenType.STR), parser.nextToken());
+		assertEquals(new Token(" ", TokenType.SEP), parser.nextToken());
+		assertEquals(new Token("", TokenType.EOL), parser.nextToken());
+		assertEquals(new Token("", TokenType.EOF), parser.nextToken());
 	}
 
 	@Test

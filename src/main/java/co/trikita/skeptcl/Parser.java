@@ -17,9 +17,10 @@ class Parser {
 
 	public Token sep() throws TclException {
 		StringBuilder s = new StringBuilder("");
-		while (str.charAt(this.pos) == ' ' || str.charAt(this.pos) == '\t' ||
-				str.charAt(this.pos) == '\r') {
-			s.append(str.charAt(this.pos));
+		while (this.pos < this.str.length() &&
+				(this.str.charAt(this.pos) == ' ' || this.str.charAt(this.pos) == '\t' ||
+				this.str.charAt(this.pos) == '\r')) {
+			s.append(this.str.charAt(this.pos));
 			this.pos++;
 		}
 		return new Token(s.toString(), TokenType.SEP);
