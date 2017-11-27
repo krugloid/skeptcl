@@ -14,7 +14,7 @@ public class Tcl {
 		String[] coreCmds = {
 			"+","-","*","/",">",">=","<","<=","==","!=",
 			"set", "puts", "if", "while", "continue", "break",
-			"return", "proc"
+			"return", "proc", "global"
 		};
 		Command coreCmd = new CoreCommand();
 		for (String cmd : coreCmds) {
@@ -24,20 +24,32 @@ public class Tcl {
 
 	public String getVar(String name) throws TclException {
 		for (int i = this.env.size()-1; i >= 0; i--) {
-			String var = this.env.get(i).vars.get(name);
-			if (var != null) {
-				return var;
+			for (int j = 0; j < this.env.get(i).vars.size(); j++) {
+				if (this.env.get(i).vars.get(j).name.equals(name)) {
+					return this.env.get(i).vars.get(j).value;
+				}
 			}
 		}
 		throw new TclException("Variable '"+name+"' not found");
 	}
 
-	public void setVar(String name, String value) throws TclException {
-		if (name != null && value != null) {
-			this.env.get(this.env.size()-1).vars.put(name, value);
-		} else {
-			throw new TclException("Could not set a variable '"+name+"' value");
+	public Variable getGlobalVar(String name) {
+		for (int i = 0; i < this.env.get(0).vars.size(); i++) {
+			if (this.env.get(0).vars.get(i).name.equals(name)) {
+				return this.env.get(0).vars.get(i);
+			}
 		}
+		return null;
+	}
+
+	public void setVar(Variable v) throws TclException {
+		for (int i = 0; i < this.env.get(this.env.size()-1).vars.size(); i++) {
+			if (v.name.equals(this.env.get(this.env.size()-1).vars.get(i).name)) {
+				this.env.get(this.env.size()-1).vars.get(i).set(v.value);
+				return;
+			}
+		}
+		this.env.get(this.env.size()-1).vars.add(v);
 	}
 
 	public void registerCommand(String name, Command cmd) {
@@ -110,6 +122,7 @@ public class Tcl {
 			else if ("break".equals(cmd)) return breakCommand(args);
 			else if ("return".equals(cmd)) return returnCommand(args);
 			else if ("proc".equals(cmd)) return procCommand(args);
+			else if ("global".equals(cmd)) return globalCommand(args);
 			else throw new TclException("Unknown command: " + args[0]);
 		}
 
@@ -148,7 +161,7 @@ public class Tcl {
 
 		private String setCommand(String[] args) throws TclException {
 			if (args.length == 3) {
-				setVar(args[1], args[2]);
+				setVar(new Variable(args[1], args[2]));
 				return "";
 			} else if (args.length == 2) {
 				return getVar(args[1]);
@@ -245,23 +258,42 @@ public class Tcl {
 				throw new TclException("Invalid function "+args[1]+" params");
 			}
 
-			final String[] argNames = args[2].split(" ");
+			String[] argNames;
+			if (args[2].isEmpty()) {
+				argNames = new String[]{};
+			} else {
+				argNames = args[2].split(" ");
+			}
 			final String body = args[3];
 			registerCommand(args[1], new Command() {
 				@Override
 				public String run(Tcl tcl, String[] argv) throws TclException {
-					if (argNames.length != argv.length-1) {
+					if (argNames.length != argv.length-1 ) {
 						throw new TclException("Invalid command syntax: "+argv[0]);
 					}
 					Tcl.this.env.add(new Env());
 					for (int i = 0; i < argNames.length; i++) {
-						Tcl.this.env.get(Tcl.this.env.size()-1).vars.put(argNames[i], argv[i+1]);
+						setVar(new Variable(argNames[i], argv[i+1]));
 					}
 					String res = eval(body);
 					Tcl.this.env.remove(Tcl.this.env.size()-1);
 					return res;
 				}
 			});
+			return "";
+		}
+
+		private String globalCommand(String[] args) throws TclException {
+			if (args.length != 2) {
+				throw new TclException("Invalid command syntax: " + args[0]);
+			}
+
+			Variable var = getGlobalVar(args[1]);
+			if (var == null) {
+				var = new Variable(args[1], "");
+				Tcl.this.env.get(0).vars.add(var);
+			}
+			setVar(var);
 			return "";
 		}
 	}
@@ -289,6 +321,24 @@ public class Tcl {
 	}
 
 	private class Env {
-		public final Map<String, String> vars = new HashMap<>();
+		public final List<Variable> vars = new ArrayList<Variable>();
+	}
+
+	private class Variable {
+		public final String name;
+		private String value;
+
+		public Variable(String n, String v) {
+			this.name = n;
+			this.value = v;
+		}
+
+		public String get() {
+			return this.value;
+		}
+
+		public void set(String v) {
+			this.value = v;
+		}
 	}
 }

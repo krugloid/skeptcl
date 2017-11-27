@@ -60,5 +60,13 @@ public class TclTest {
 		assertEquals("5", tcl.eval("proc sum {a b} {return [+ $a $b]};"+
 					"set x [sum 2 3]; set x"));
 	}
+
+	@Test
+	public void testGlobal() throws TclException {
+		Tcl tcl = new Tcl();
+		assertEquals("3", tcl.eval("set a 2; proc incrA {} {global a; set a 3}; incrA; set a"));
+		assertEquals("3", tcl.eval("proc incrA {} {global a; set a 3}; incrA; set a"));
+		assertEquals("2", tcl.eval("set a 2; proc incrA {} {set a 3}; incrA; set a"));
+	}
 }
 
